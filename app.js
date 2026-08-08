@@ -85,38 +85,30 @@ function renderSummary(data,warn=''){
 }
 
 function renderCards(data){
-
-  const cartKeys = new Set(
-    cart.map(item => item.key)
-  );
+  const cartKeys = new Set(cart.map(item => item.key));
 
   $('catalog').innerHTML = data.map(r => {
-
     const cond = clean(r.Condicao || r['Condição']);
     const status = clean(r.Status) || 'Disponível';
     const available = isAvailable(r);
     const reserve = status === 'Reservado';
-
     const key = keyOf(r);
+    const selected = cartKeys.has(key);
 
-    const selected =
-      cartKeys.has(key);
+    const imageUrl = imgOf(r) || 'assets/card-placeholder.svg';
 
-    const msg =
-      `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
+    const msg = `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
 
     return `
-      <article class="card ${selected?'selectedForCart':''}">
+      <article class="card ${selected ? 'selectedForCart' : ''}">
 
-        <span class="ribbon ${available?'':reserve?'reserved':'sold'}">
+        <span class="ribbon ${available ? '' : reserve ? 'reserved' : 'sold'}">
           ${status}
         </span>
 
         <div class="imageWrap">
-
-          'assets/card-placeholder.svg'}"
-            alt="${clean(r.Nome)}">
-
+          ${imageUrl}"
+          >
         </div>
 
         <div class="cardBody">
@@ -124,9 +116,7 @@ function renderCards(data){
           <h2>${clean(r.Nome)}</h2>
 
           <p class="meta">
-            Nº ${clean(r.Numero)||'-'}
-            •
-            ${clean(r.Set)||'Coleção não informada'}
+            Nº ${clean(r.Numero) || '-'} • ${clean(r.Set) || 'Coleção não informada'}
           </p>
 
           <div class="price">
@@ -134,9 +124,8 @@ function renderCards(data){
           </div>
 
           <div class="tags">
-
             <span class="tag">
-              ${clean(r.Idioma)||'Idioma não informado'}
+              ${clean(r.Idioma) || 'Idioma não informado'}
             </span>
 
             <span class="tag tag--green">
@@ -152,39 +141,28 @@ function renderCards(data){
               ? `<span class="tag tag--red">${clean(r.Observacoes)}</span>`
               : ''
             }
-
           </div>
 
           ${available ? `
-
             <button
-              class="selectBtn ${selected?'selected':''}"
+              class="selectBtn ${selected ? 'selected' : ''}"
               onclick="toggleCart('${escapeAttr(key)}')">
-
-              ${selected
-                ? 'Remover do carrinho'
-                : 'Adicionar ao carrinho'}
-
+              ${selected ? 'Remover do carrinho' : 'Adicionar ao carrinho'}
             </button>
 
             ">
-
               Comprar somente esta carta
-
             </a>
-
           ` : ''}
 
         </div>
 
       </article>
     `;
-
   }).join('');
 
   renderCart();
 }
-
 function escapeAttr(value){return String(value).replace(/'/g, '&#39;').replace(/"/g, '&quot;')}
 function loadCart(){try{cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]')}catch{cart=[]}}
 function saveCart(){localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))}
@@ -210,17 +188,33 @@ function cartMessage(){
 
 function renderCart(){
   const count = cart.length;
-  const total = cart.reduce((s,item)=>s+item.preco,0);
-  $('cartCount').textContent = `${count} carta${count===1?'':'s'}`;
+  const total = cart.reduce((s, item) => s + item.preco, 0);
+
+  $('cartCount').textContent = `${count} carta${count === 1 ? '' : 's'}`;
   $('cartTotal').textContent = BRL.format(total);
-  $('cartItems').innerHTML = count ? cart.map(item=>`<div class="cartItem">
-      ${item.imagem || 'assets/card-placeholder.svg'}="${item.nome}">
-      <div><strong>${item.nome} #${item.numero}</strong><span>${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}</span></div>
-      <button onclick="removeFromCart('${escapeAttr(item.key)}')">×</button>
-    </div>`).join('') : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
+
+  $('cartItems').innerHTML = count
+    ? cart.map(item => `
+        <div class="cartItem">
+          ${item.imagem || 'assets/card-placeholder.svg'}
+
+          <div>
+            <strong>${item.nome} #${item.numero}</strong>
+            <span>
+              ${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}
+            </span>
+          </div>
+
+          <button onclick="removeFromCart('${escapeAttr(item.key)}')">
+            ×
+          </button>
+        </div>
+      `).join('')
+    : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
+
   const link = $('cartWhatsapp');
   link.href = waLink(cartMessage());
-  link.classList.toggle('disabled', count===0);
+  link.classList.toggle('disabled', count === 0);
 }
 
 function populateFilters(){
