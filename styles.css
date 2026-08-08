@@ -3,7 +3,6 @@
 }
 *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f5f7fb;color:var(--ink)}
 .hero{
-.hero{
     position:relative;
     min-height:760px;
 
