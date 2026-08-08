@@ -9,27 +9,59 @@ let cart = [];
 const CART_STORAGE_KEY = 'pokemonTcgCatalogCart';
 const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const $ = (id)=>document.getElementById(id);
+
 function clean(v){return (v ?? '').toString().trim()}
 function priceNumber(v){return Number(clean(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0}
 function isAvailable(r){return clean(r.Status).toLowerCase()==='disponível' || clean(r.Status).toLowerCase()==='disponivel'}
 function imgOf(r){return clean(r.URL_Imagem || r.URLImagem || r.Imagem || r['URL Imagem'])}
 function keyOf(r){return clean(r.ID) || `${clean(r.Nome)}-${clean(r.Numero)}-${clean(r.Set)}`}
 function waLink(message){const phone = clean(CFG.WHATSAPP_NUMBER).replace(/\D/g,''); return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`}
+
 async function loadRows(){
   const hasSheet = CFG.SHEET_ID && CFG.SHEET_ID !== 'COLE_AQUI_O_ID_DA_SUA_PLANILHA';
   if(!hasSheet){ rows = SAMPLE; render(); return; }
   const tab = encodeURIComponent(CFG.SHEET_TAB || 'ESTOQUE_MESTRE');
   const endpoint = `${CFG.OPENSHEET_BASE || 'https://opensheet.elk.sh'}/${CFG.SHEET_ID}/${tab}?raw=true`;
-  try{ const res = await fetch(endpoint); if(!res.ok) throw new Error('Erro ao carregar planilha'); rows = await res.json(); rows = rows.filter(r=>clean(r.Nome)); await fillMissingImages(rows); render(); }
-  catch(e){ console.warn(e); rows = SAMPLE; render('Não foi possível carregar sua planilha. Exibindo dados de exemplo.'); }
+  try{
+    const res = await fetch(endpoint);
+    if(!res.ok) throw new Error('Erro ao carregar planilha');
+    rows = await res.json();
+    rows = rows.filter(r=>clean(r.Nome));
+    await fillMissingImages(rows);
+    render();
+  }
+  catch(e){
+    console.warn(e);
+    rows = SAMPLE;
+    render('Não foi possível carregar sua planilha. Exibindo dados de exemplo.');
+  }
 }
+
 async function fillMissingImages(data){
   const todo = data.filter(r=>!imgOf(r) && clean(r.Nome)).slice(0,20);
-  await Promise.all(todo.map(async r=>{ try{ const q=[]; q.push(`name:${clean(r.Nome).replace(/\s+/g,'* ')}*`); if(clean(r.Numero)) q.push(`number:${clean(r.Numero)}`); const url=`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q.join(' '))}&select=id,name,number,set,rarity,images`; const j=await fetch(url).then(x=>x.json()); const c=(j.data||[])[0]; if(c){ r.URL_Imagem = c.images?.large || c.images?.small || ''; r.Set = r.Set || c.set?.name || ''; r.Raridade = r.Raridade || c.rarity || ''; } }catch{} }));
+  await Promise.all(todo.map(async r=>{
+    try{
+      const q=[];
+      q.push(`name:${clean(r.Nome).replace(/\s+/g,'* ')}*`);
+      if(clean(r.Numero)) q.push(`number:${clean(r.Numero)}`);
+      const url=`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q.join(' '))}&select=id,name,number,set,rarity,images`;
+      const j=await fetch(url).then(x=>x.json());
+      const c=(j.data||[])[0];
+      if(c){
+        r.URL_Imagem = c.images?.large || c.images?.small || '';
+        r.Set = r.Set || c.set?.name || '';
+        r.Raridade = r.Raridade || c.rarity || '';
+      }
+    }catch{}
+  }));
 }
+
 function render(warn=''){
   const query = clean($('search').value).toLowerCase();
-  const status = $('statusFilter').value; const lang = $('languageFilter').value; const cond = $('conditionFilter').value; const sort = $('sortBy').value;
+  const status = $('statusFilter').value;
+  const lang = $('languageFilter').value;
+  const cond = $('conditionFilter').value;
+  const sort = $('sortBy').value;
   populateFilters();
   let data = rows.filter(r=>clean(r.Nome));
   if(status !== 'Todos') data = data.filter(r=>clean(r.Status)===status || (status==='Disponível' && isAvailable(r)));
@@ -37,57 +69,86 @@ function render(warn=''){
   if(cond !== 'Todos') data = data.filter(r=>clean(r.Condicao || r['Condição'])===cond);
   if(query) data = data.filter(r=>Object.values(r).join(' ').toLowerCase().includes(query));
   data.sort((a,b)=> sort==='preco-asc'? priceNumber(a.Preco)-priceNumber(b.Preco) : sort==='preco-desc'? priceNumber(b.Preco)-priceNumber(a.Preco) : sort==='set'? clean(a.Set).localeCompare(clean(b.Set),'pt-BR') : clean(a.Nome).localeCompare(clean(b.Nome),'pt-BR'));
-  renderSummary(data,warn); renderCards(data); $('empty').hidden = data.length>0;
+  renderSummary(data,warn);
+  renderCards(data);
+  $('empty').hidden = data.length>0;
 }
+
 function renderSummary(data,warn=''){
-  const disp = rows.filter(isAvailable).length; const total = rows.filter(r=>clean(r.Nome)).length; const valor = rows.filter(isAvailable).reduce((s,r)=>s+priceNumber(r.Preco)*(Number(r.Qtde)||1),0);
+  const disp = rows.filter(isAvailable).length;
+  const total = rows.filter(r=>clean(r.Nome)).length;
+  const valor = rows.filter(isAvailable).reduce((s,r)=>s+priceNumber(r.Preco)*(Number(r.Qtde)||1),0);
   $('summary').innerHTML = `${warn?`<div class="kpi" style="grid-column:1/-1"><span>Aviso</span><strong style="font-size:16px">${warn}</strong></div>`:''}<div class="kpi"><span>Itens exibidos</span><strong>${data.length}</strong></div><div class="kpi"><span>Disponíveis</span><strong>${disp}</strong></div><div class="kpi"><span>Total cadastradas</span><strong>${total}</strong></div><div class="kpi"><span>Valor disponível</span><strong>${BRL.format(valor)}</strong></div>`;
   const list = data.filter(isAvailable).slice(0,25).map(r=>`${clean(r.Nome)} #${clean(r.Numero)} - ${BRL.format(priceNumber(r.Preco))}`).join('\n');
   const whatsAllBtn = document.getElementById('whatsAll');
-if (whatsAllBtn) whatsAllBtn.href = waLink(`Olá! Tenho interesse nestas cartas Pokémon TCG:\n\n${list}`);
+  if (whatsAllBtn) whatsAllBtn.href = waLink(`Olá! Tenho interesse nestas cartas Pokémon TCG:\n\n${list}`);
 }
+
 function renderCards(data){
   const cartKeys = new Set(cart.map(item=>item.key));
   $('catalog').innerHTML = data.map(r=>{
-    const cond = clean(r.Condicao || r['Condição']); const status = clean(r.Status) || 'Disponível'; const available = isAvailable(r); const reserve = status==='Reservado';
-    const key = keyOf(r); const selected = cartKeys.has(key);
+    const cond = clean(r.Condicao || r['Condição']);
+    const status = clean(r.Status) || 'Disponível';
+    const available = isAvailable(r);
+    const reserve = status==='Reservado';
+    const key = keyOf(r);
+    const selected = cartKeys.has(key);
     const msg = `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
-    return `<article class="card ${selected?'selectedForCart':''}"><span class="ribbon ${available?'':reserve?'reserved':'sold'}">${status}</span><div class="imageWrap"><img loading="lazy" src="${imgOf(r)||'assets/card-placeholder.svg'}" alt="${clean(r.Nome)}"></div><div class="cardBody"><h2>${clean(r.Nome)}</h2><p class="meta">Nº ${clean(r.Numero)||'-'} • ${clean(r.Set)||'Coleção não informada'}</p><div class="price">${BRL.format(priceNumber(r.Preco))}</div><div class="tags"><span class="tag">${clean(r.Idioma)||'Idioma não informado'}</span><span class="tag tag--green">${cond||'Condição não informada'}</span>${clean(r.Variante)?`<span class="tag">${clean(r.Variante)}</span>`:''}${clean(r.Observacoes)?`<span class="tag tag--red">${clean(r.Observacoes)}</span>`:''}</div>${available?`<button class="selectBtn ${selected?'selected':''}" onclick="toggleCart('${escapeAttr(key)}')">${selected?'Remover do carrinho':'Adicionar ao carrinho'}</button><a class="whats no-print" target="_blank" rel="noreferrer" href="${waLink(msg)}">Comprar somente esta carta</a>`:''}</div></article>`;
+    return `<article class="card ${selected?'selectedForCart':''}"><span class="ribbon ${available?'':reserve?'reserved':'sold'}">${status}</span><div class="imageWrap">${imgOf(r)||'assets/card-placeholder.svg'}</div><div class="cardBody"><h2>${clean(r.Nome)}</h2><p class="meta">Nº ${clean(r.Numero)||'-'} • ${clean(r.Set)||'Coleção não informada'}</p><div class="price">${BRL.format(priceNumber(r.Preco))}</div><div class="tags"><span class="tag">${clean(r.Idioma)||'Idioma não informado'}</span><span class="tag tag--green">${cond||'Condição não informada'}</span>${clean(r.Variante)?`<span class="tag">${clean(r.Variante)}</span>`:''}${clean(r.Observacoes)?`<span class="tag tag--red">${clean(r.Observacoes)}</span>`:''}</div>${available?`<button class="selectBtn ${selected?'selected':''}" onclick="toggleCart('${escapeAttr(key)}')">${selected?'Remover do carrinho':'Adicionar ao carrinho'}</button>${waLink(msg)}`:''}</div></article>`;
   }).join('');
   renderCart();
 }
+
 function escapeAttr(value){return String(value).replace(/'/g, '&#39;').replace(/"/g, '&quot;')}
 function loadCart(){try{cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]')}catch{cart=[]}}
 function saveCart(){localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))}
+
 function toggleCart(key){
   const current = rows.find(r=>keyOf(r)===key);
   if(!current || !isAvailable(current)) return;
   const exists = cart.some(item=>item.key===key);
   if(exists){cart = cart.filter(item=>item.key!==key)}
   else{cart.push({key, nome:clean(current.Nome), numero:clean(current.Numero), set:clean(current.Set), idioma:clean(current.Idioma), condicao:clean(current.Condicao || current['Condição']), preco:priceNumber(current.Preco), imagem:imgOf(current)})}
-  saveCart(); render();
+  saveCart();
+  render();
 }
+
 function removeFromCart(key){cart = cart.filter(item=>item.key!==key); saveCart(); render()}
 function clearCart(){cart=[]; saveCart(); render()}
+
 function cartMessage(){
   const lines = cart.map((item, idx)=>`${idx+1}. ${item.nome} #${item.numero}${item.set?` (${item.set})`:''} - ${item.idioma || 'Idioma não informado'} - ${item.condicao || 'Condição não informada'} - ${BRL.format(item.preco)}`);
   const total = cart.reduce((s,item)=>s+item.preco,0);
   return `Olá! Tenho interesse nas seguintes cartas Pokémon TCG:\n\n${lines.join('\n')}\n\nValor total: ${BRL.format(total)}\n\nPode confirmar disponibilidade e forma de pagamento?`;
 }
+
 function renderCart(){
-  const count = cart.length; const total = cart.reduce((s,item)=>s+item.preco,0);
+  const count = cart.length;
+  const total = cart.reduce((s,item)=>s+item.preco,0);
   $('cartCount').textContent = `${count} carta${count===1?'':'s'}`;
   $('cartTotal').textContent = BRL.format(total);
-  $('cartItems').innerHTML = count ? cart.map(item=>`<div class="cartItem"><img src="${item.imagem || 'assets/card-placeholder.svg'}" alt="${item.nome}"><div><strong>${item.nome} #${item.numero}</strong><span>${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}</span></div><button onclick="removeFromCart('${escapeAttr(item.key)}')">×</button></div>`).join('') : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
-  const link = $('cartWhatsapp'); link.href = waLink(cartMessage()); link.classList.toggle('disabled', count===0);
+  $('cartItems').innerHTML = count ? cart.map(item=>`<div class="cartItem">${item.imagem || 'assets/card-placeholder.svg'}<div><strong>${item.nome} #${item.numero}</strong><span>${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}</span></div><button onclick="removeFromCart('${escapeAttr(item.key)}')">×</button></div>`).join('') : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
+  const link = $('cartWhatsapp');
+  link.href = waLink(cartMessage());
+  link.classList.toggle('disabled', count===0);
 }
+
 function populateFilters(){
-  const fill = (id, values)=>{const el=$(id); const current=el.value; const opts=['Todos',...Array.from(new Set(values.filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pt-BR'))]; el.innerHTML=opts.map(v=>`<option value="${v}">${v}</option>`).join(''); if(opts.includes(current)) el.value=current;};
-  fill('languageFilter', rows.map(r=>clean(r.Idioma))); fill('conditionFilter', rows.map(r=>clean(r.Condicao || r['Condição'])));
+  const fill = (id, values)=>{
+    const el=$(id);
+    const current=el.value;
+    const opts=['Todos',...Array.from(new Set(values.filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pt-BR'))];
+    el.innerHTML=opts.map(v=>`<option value="${v}">${v}</option>`).join('');
+    if(opts.includes(current)) el.value=current;
+  };
+  fill('languageFilter', rows.map(r=>clean(r.Idioma)));
+  fill('conditionFilter', rows.map(r=>clean(r.Condicao || r['Condição'])));
 }
-['search','statusFilter','languageFilter','conditionFilter','sortBy'].forEach(id=>$(id).addEventListener('input',()=>render()));
+
+['search','statusFilter','languageFilter','conditionFilter','sortBy'].forEach(id=>$(id)?.addEventListener('input',()=>render()));
 document.getElementById('printBtn')?.addEventListener('click',()=>window.print());
-$('cartToggle').addEventListener('click',()=>document.getElementById('cart').classList.toggle('collapsed'));
-$('clearCart').addEventListener('click',clearCart);
+document.getElementById('cartToggle')?.addEventListener('click',()=>document.getElementById('cart')?.classList.toggle('collapsed'));
+document.getElementById('clearCart')?.addEventListener('click',clearCart);
+
 loadCart();
 loadRows();
