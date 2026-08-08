@@ -43,7 +43,8 @@ function renderSummary(data,warn=''){
   const disp = rows.filter(isAvailable).length; const total = rows.filter(r=>clean(r.Nome)).length; const valor = rows.filter(isAvailable).reduce((s,r)=>s+priceNumber(r.Preco)*(Number(r.Qtde)||1),0);
   $('summary').innerHTML = `${warn?`<div class="kpi" style="grid-column:1/-1"><span>Aviso</span><strong style="font-size:16px">${warn}</strong></div>`:''}<div class="kpi"><span>Itens exibidos</span><strong>${data.length}</strong></div><div class="kpi"><span>Disponíveis</span><strong>${disp}</strong></div><div class="kpi"><span>Total cadastradas</span><strong>${total}</strong></div><div class="kpi"><span>Valor disponível</span><strong>${BRL.format(valor)}</strong></div>`;
   const list = data.filter(isAvailable).slice(0,25).map(r=>`${clean(r.Nome)} #${clean(r.Numero)} - ${BRL.format(priceNumber(r.Preco))}`).join('\n');
-  $('whatsAll').href = waLink(`Olá! Tenho interesse nestas cartas Pokémon TCG:\n\n${list}`);
+  const whatsAllBtn = document.getElementById('whatsAll');
+if (whatsAllBtn) whatsAllBtn.href = waLink(`Olá! Tenho interesse nestas cartas Pokémon TCG:\n\n${list}`);
 }
 function renderCards(data){
   const cartKeys = new Set(cart.map(item=>item.key));
@@ -85,7 +86,7 @@ function populateFilters(){
   fill('languageFilter', rows.map(r=>clean(r.Idioma))); fill('conditionFilter', rows.map(r=>clean(r.Condicao || r['Condição'])));
 }
 ['search','statusFilter','languageFilter','conditionFilter','sortBy'].forEach(id=>$(id).addEventListener('input',()=>render()));
-$('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('printBtn')?.addEventListener('click',()=>window.print());
 $('cartToggle').addEventListener('click',()=>document.getElementById('cart').classList.toggle('collapsed'));
 $('clearCart').addEventListener('click',clearCart);
 loadCart();
