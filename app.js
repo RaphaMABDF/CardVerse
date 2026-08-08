@@ -1,107 +1,294 @@
 const CFG = window.CATALOG_CONFIG || {};
+
 const SAMPLE = [
-  {Status:'Disponível', Nome:'Charizard ex', Numero:'199', Set:'Obsidian Flames', Raridade:'Special Illustration Rare', Variante:'SIR', Idioma:'Inglês', Condicao:'NM', Qtde:'1', Preco:'1250', URL_Imagem:'https://images.pokemontcg.io/sv3/223_hires.png', Observacoes:'Exemplo de preenchimento'},
-  {Status:'Disponível', Nome:'Pikachu', Numero:'173', Set:'Crown Zenith', Raridade:'Secret Rare', Variante:'Secret', Idioma:'Inglês', Condicao:'NM', Qtde:'1', Preco:'450', URL_Imagem:'https://images.pokemontcg.io/swsh12pt5/160_hires.png', Observacoes:'Exemplo de catálogo'},
-  {Status:'Reservado', Nome:'Gengar VMAX', Numero:'271', Set:'Fusion Strike', Raridade:'Rare Secret', Variante:'Alternate Art', Idioma:'Inglês', Condicao:'SP', Qtde:'1', Preco:'1800', URL_Imagem:'https://images.pokemontcg.io/swsh8/271_hires.png', Observacoes:'Pequeno whitening'}
+  {
+    Status: 'Disponível',
+    Nome: 'Charizard ex',
+    Numero: '199',
+    Set: 'Obsidian Flames',
+    Raridade: 'Special Illustration Rare',
+    Variante: 'SIR',
+    Idioma: 'Inglês',
+    Condicao: 'NM',
+    Qtde: '1',
+    Preco: '1250',
+    URL_Imagem: 'https://images.pokemontcg.io/sv3/223_hires.png',
+    Observacoes: 'Exemplo de preenchimento'
+  },
+  {
+    Status: 'Disponível',
+    Nome: 'Pikachu',
+    Numero: '173',
+    Set: 'Crown Zenith',
+    Raridade: 'Secret Rare',
+    Variante: 'Secret',
+    Idioma: 'Inglês',
+    Condicao: 'NM',
+    Qtde: '1',
+    Preco: '450',
+    URL_Imagem: 'https://images.pokemontcg.io/swsh12pt5/160_hires.png',
+    Observacoes: 'Exemplo de catálogo'
+  },
+  {
+    Status: 'Reservado',
+    Nome: 'Gengar VMAX',
+    Numero: '271',
+    Set: 'Fusion Strike',
+    Raridade: 'Rare Secret',
+    Variante: 'Alternate Art',
+    Idioma: 'Inglês',
+    Condicao: 'SP',
+    Qtde: '1',
+    Preco: '1800',
+    URL_Imagem: 'https://images.pokemontcg.io/swsh8/271_hires.png',
+    Observacoes: 'Pequeno whitening'
+  }
 ];
+
 let rows = [];
 let cart = [];
+
 const CART_STORAGE_KEY = 'pokemonTcgCatalogCart';
-const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
-const $ = (id)=>document.getElementById(id);
+const BRL = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL'
+});
 
-function clean(v){return (v ?? '').toString().trim()}
-function priceNumber(v){return Number(clean(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0}
-function isAvailable(r){return clean(r.Status).toLowerCase()==='disponível' || clean(r.Status).toLowerCase()==='disponivel'}
-function imgOf(r){return clean(r.URL_Imagem || r.URLImagem || r.Imagem || r['URL Imagem'])}
-function keyOf(r){return clean(r.ID) || `${clean(r.Nome)}-${clean(r.Numero)}-${clean(r.Set)}`}
-function waLink(message){const phone = clean(CFG.WHATSAPP_NUMBER).replace(/\D/g,''); return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`}
+const $ = (id) => document.getElementById(id);
 
-async function loadRows(){
-  const hasSheet = CFG.SHEET_ID && CFG.SHEET_ID !== 'COLE_AQUI_O_ID_DA_SUA_PLANILHA';
-  if(!hasSheet){ rows = SAMPLE; render(); return; }
+function clean(v) {
+  return (v ?? '').toString().trim();
+}
+
+function priceNumber(v) {
+  return Number(
+    clean(v)
+      .replace(/[R$\s.]/g, '')
+      .replace(',', '.')
+  ) || 0;
+}
+
+function isAvailable(r) {
+  const status = clean(r.Status).toLowerCase();
+  return status === 'disponível' || status === 'disponivel';
+}
+
+function imgOf(r) {
+  return clean(
+    r.URL_Imagem ||
+    r.URLImagem ||
+    r.Imagem ||
+    r['URL Imagem']
+  );
+}
+
+function keyOf(r) {
+  return clean(r.ID) || `${clean(r.Nome)}-${clean(r.Numero)}-${clean(r.Set)}`;
+}
+
+function waLink(message) {
+  const phone = clean(CFG.WHATSAPP_NUMBER).replace(/\D/g, '');
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+async function loadRows() {
+  const hasSheet =
+    CFG.SHEET_ID &&
+    CFG.SHEET_ID !== 'COLE_AQUI_O_ID_DA_SUA_PLANILHA';
+
+  if (!hasSheet) {
+    rows = SAMPLE;
+    render();
+    return;
+  }
+
   const tab = encodeURIComponent(CFG.SHEET_TAB || 'ESTOQUE_MESTRE');
   const endpoint = `${CFG.OPENSHEET_BASE || 'https://opensheet.elk.sh'}/${CFG.SHEET_ID}/${tab}?raw=true`;
-  try{
+
+  try {
     const res = await fetch(endpoint);
-    if(!res.ok) throw new Error('Erro ao carregar planilha');
+
+    if (!res.ok) {
+      throw new Error('Erro ao carregar planilha');
+    }
+
     rows = await res.json();
-    rows = rows.filter(r=>clean(r.Nome));
+    rows = rows.filter(r => clean(r.Nome));
+
     await fillMissingImages(rows);
+
     render();
-  }
-  catch(e){
+  } catch (e) {
     console.warn(e);
     rows = SAMPLE;
     render('Não foi possível carregar sua planilha. Exibindo dados de exemplo.');
   }
 }
 
-async function fillMissingImages(data){
-  const todo = data.filter(r=>!imgOf(r) && clean(r.Nome)).slice(0,20);
-  await Promise.all(todo.map(async r=>{
-    try{
-      const q=[];
-      q.push(`name:${clean(r.Nome).replace(/\s+/g,'* ')}*`);
-      if(clean(r.Numero)) q.push(`number:${clean(r.Numero)}`);
-      const url=`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q.join(' '))}&select=id,name,number,set,rarity,images`;
-      const j=await fetch(url).then(x=>x.json());
-      const c=(j.data||[])[0];
-      if(c){
-        r.URL_Imagem = c.images?.large || c.images?.small || '';
-        r.Set = r.Set || c.set?.name || '';
-        r.Raridade = r.Raridade || c.rarity || '';
-      }
-    }catch{}
-  }));
+async function fillMissingImages(data) {
+  const todo = data
+    .filter(r => !imgOf(r) && clean(r.Nome))
+    .slice(0, 20);
+
+  await Promise.all(
+    todo.map(async r => {
+      try {
+        const q = [];
+
+        q.push(`name:${clean(r.Nome).replace(/\s+/g, '* ')}*`);
+
+        if (clean(r.Numero)) {
+          q.push(`number:${clean(r.Numero)}`);
+        }
+
+        const url =
+          `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q.join(' '))}&select=id,name,number,set,rarity,images`;
+
+        const j = await fetch(url).then(x => x.json());
+        const c = (j.data || [])[0];
+
+        if (c) {
+          r.URL_Imagem = c.images?.large || c.images?.small || '';
+          r.Set = r.Set || c.set?.name || '';
+          r.Raridade = r.Raridade || c.rarity || '';
+        }
+      } catch {}
+    })
+  );
 }
 
-function render(warn=''){
-  const query = clean($('search').value).toLowerCase();
-  const status = $('statusFilter').value;
-  const lang = $('languageFilter').value;
-  const cond = $('conditionFilter').value;
-  const sort = $('sortBy').value;
+function render(warn = '') {
+  const query = clean($('search')?.value).toLowerCase();
+  const status = $('statusFilter')?.value || 'Disponível';
+  const lang = $('languageFilter')?.value || 'Todos';
+  const cond = $('conditionFilter')?.value || 'Todos';
+  const sort = $('sortBy')?.value || 'nome';
+
   populateFilters();
-  let data = rows.filter(r=>clean(r.Nome));
-  if(status !== 'Todos') data = data.filter(r=>clean(r.Status)===status || (status==='Disponível' && isAvailable(r)));
-  if(lang !== 'Todos') data = data.filter(r=>clean(r.Idioma)===lang);
-  if(cond !== 'Todos') data = data.filter(r=>clean(r.Condicao || r['Condição'])===cond);
-  if(query) data = data.filter(r=>Object.values(r).join(' ').toLowerCase().includes(query));
-  data.sort((a,b)=> sort==='preco-asc'? priceNumber(a.Preco)-priceNumber(b.Preco) : sort==='preco-desc'? priceNumber(b.Preco)-priceNumber(a.Preco) : sort==='set'? clean(a.Set).localeCompare(clean(b.Set),'pt-BR') : clean(a.Nome).localeCompare(clean(b.Nome),'pt-BR'));
-  renderSummary(data,warn);
+
+  let data = rows.filter(r => clean(r.Nome));
+
+  if (status !== 'Todos') {
+    data = data.filter(r =>
+      clean(r.Status) === status ||
+      (status === 'Disponível' && isAvailable(r))
+    );
+  }
+
+  if (lang !== 'Todos') {
+    data = data.filter(r => clean(r.Idioma) === lang);
+  }
+
+  if (cond !== 'Todos') {
+    data = data.filter(r => clean(r.Condicao || r['Condição']) === cond);
+  }
+
+  if (query) {
+    data = data.filter(r =>
+      Object.values(r).join(' ').toLowerCase().includes(query)
+    );
+  }
+
+  data.sort((a, b) => {
+    if (sort === 'preco-asc') {
+      return priceNumber(a.Preco) - priceNumber(b.Preco);
+    }
+
+    if (sort === 'preco-desc') {
+      return priceNumber(b.Preco) - priceNumber(a.Preco);
+    }
+
+    if (sort === 'set') {
+      return clean(a.Set).localeCompare(clean(b.Set), 'pt-BR');
+    }
+
+    return clean(a.Nome).localeCompare(clean(b.Nome), 'pt-BR');
+  });
+
+  renderSummary(data, warn);
   renderCards(data);
-  $('empty').hidden = data.length>0;
+
+  if ($('empty')) {
+    $('empty').hidden = data.length > 0;
+  }
 }
 
-function renderSummary(data,warn=''){
+function renderSummary(data, warn = '') {
   const disp = rows.filter(isAvailable).length;
-  const total = rows.filter(r=>clean(r.Nome)).length;
-  const valor = rows.filter(isAvailable).reduce((s,r)=>s+priceNumber(r.Preco)*(Number(r.Qtde)||1),0);
-  $('summary').innerHTML = `${warn?`<div class="kpi" style="grid-column:1/-1"><span>Aviso</span><strong style="font-size:16px">${warn}</strong></div>`:''}<div class="kpi"><span>Itens exibidos</span><strong>${data.length}</strong></div><div class="kpi"><span>Disponíveis</span><strong>${disp}</strong></div><div class="kpi"><span>Total cadastradas</span><strong>${total}</strong></div><div class="kpi"><span>Valor disponível</span><strong>${BRL.format(valor)}</strong></div>`;
-  const list = data.filter(isAvailable).slice(0,25).map(r=>`${clean(r.Nome)} #${clean(r.Numero)} - ${BRL.format(priceNumber(r.Preco))}`).join('\n');
+  const total = rows.filter(r => clean(r.Nome)).length;
+  const valor = rows
+    .filter(isAvailable)
+    .reduce((s, r) => s + priceNumber(r.Preco) * (Number(r.Qtde) || 1), 0);
+
+  if ($('summary')) {
+    $('summary').innerHTML = `
+      ${warn ? `
+        <div class="kpi" style="grid-column:1/-1">
+          <span>Aviso</span>
+          <strong style="font-size:16px">${warn}</strong>
+        </div>
+      ` : ''}
+
+      <div class="kpi">
+        <span>Itens exibidos</span>
+        <strong>${data.length}</strong>
+      </div>
+
+      <div class="kpi">
+        <span>Disponíveis</span>
+        <strong>${disp}</strong>
+      </div>
+
+      <div class="kpi">
+        <span>Total cadastradas</span>
+        <strong>${total}</strong>
+      </div>
+
+      <div class="kpi">
+        <span>Valor disponível</span>
+        <strong>${BRL.format(valor)}</strong>
+      </div>
+    `;
+  }
+
+  const list = data
+    .filter(isAvailable)
+    .slice(0, 25)
+    .map(r => `${clean(r.Nome)} #${clean(r.Numero)} - ${BRL.format(priceNumber(r.Preco))}`)
+    .join('\n');
+
   const whatsAllBtn = document.getElementById('whatsAll');
-  if (whatsAllBtn) whatsAllBtn.href = waLink(`Olá! Tenho interesse nestas cartas Pokémon TCG:\n\n${list}`);
+
+  if (whatsAllBtn) {
+    whatsAllBtn.href = waLink(
+      `Olá! Tenho interesse nestas cartas Pokémon TCG:\n\n${list}`
+    );
+  }
 }
 
-function renderCards(data){
+function renderCards(data) {
+  const catalog = $('catalog');
+
+  if (!catalog) {
+    return;
+  }
+
   const cartKeys = new Set(cart.map(item => item.key));
 
-  $('catalog').innerHTML = data.map(r => {
+  catalog.innerHTML = data.map(r => {
     const cond = clean(r.Condicao || r['Condição']);
     const status = clean(r.Status) || 'Disponível';
     const available = isAvailable(r);
     const reserve = status === 'Reservado';
     const key = keyOf(r);
     const selected = cartKeys.has(key);
-
     const imageUrl = imgOf(r) || 'assets/card-placeholder.svg';
 
-    const msg = `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
+    const msg =
+      `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
 
     return `
       <article class="card ${selected ? 'selectedForCart' : ''}">
-
         <span class="ribbon ${available ? '' : reserve ? 'reserved' : 'sold'}">
           ${status}
         </span>
@@ -112,7 +299,6 @@ function renderCards(data){
         </div>
 
         <div class="cardBody">
-
           <h2>${clean(r.Nome)}</h2>
 
           <p class="meta">
@@ -146,96 +332,182 @@ function renderCards(data){
           ${available ? `
             <button
               class="selectBtn ${selected ? 'selected' : ''}"
-              onclick="toggleCart('${escapeAttr(key)}')">
+              onclick="toggleCart('${escapeAttr(key)}')"
+            >
               ${selected ? 'Remover do carrinho' : 'Adicionar ao carrinho'}
             </button>
 
-            ">
+            "
+            >
               Comprar somente esta carta
             </a>
           ` : ''}
-
         </div>
-
       </article>
     `;
   }).join('');
 
   renderCart();
 }
-function escapeAttr(value){return String(value).replace(/'/g, '&#39;').replace(/"/g, '&quot;')}
-function loadCart(){try{cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]')}catch{cart=[]}}
-function saveCart(){localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))}
 
-function toggleCart(key){
-  const current = rows.find(r=>keyOf(r)===key);
-  if(!current || !isAvailable(current)) return;
-  const exists = cart.some(item=>item.key===key);
-  if(exists){cart = cart.filter(item=>item.key!==key)}
-  else{cart.push({key, nome:clean(current.Nome), numero:clean(current.Numero), set:clean(current.Set), idioma:clean(current.Idioma), condicao:clean(current.Condicao || current['Condição']), preco:priceNumber(current.Preco), imagem:imgOf(current)})}
+function escapeAttr(value) {
+  return String(value)
+    .replace(/'/g, '&#39;')
+    .replace(/"/g, '&quot;');
+}
+
+function loadCart() {
+  try {
+    cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
+  } catch {
+    cart = [];
+  }
+}
+
+function saveCart() {
+  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+}
+
+function toggleCart(key) {
+  const current = rows.find(r => keyOf(r) === key);
+
+  if (!current || !isAvailable(current)) {
+    return;
+  }
+
+  const exists = cart.some(item => item.key === key);
+
+  if (exists) {
+    cart = cart.filter(item => item.key !== key);
+  } else {
+    cart.push({
+      key,
+      nome: clean(current.Nome),
+      numero: clean(current.Numero),
+      set: clean(current.Set),
+      idioma: clean(current.Idioma),
+      condicao: clean(current.Condicao || current['Condição']),
+      preco: priceNumber(current.Preco),
+      imagem: imgOf(current)
+    });
+  }
+
   saveCart();
   render();
 }
 
-function removeFromCart(key){cart = cart.filter(item=>item.key!==key); saveCart(); render()}
-function clearCart(){cart=[]; saveCart(); render()}
+function removeFromCart(key) {
+  cart = cart.filter(item => item.key !== key);
+  saveCart();
+  render();
+}
 
-function cartMessage(){
-  const lines = cart.map((item, idx)=>`${idx+1}. ${item.nome} #${item.numero}${item.set?` (${item.set})`:''} - ${item.idioma || 'Idioma não informado'} - ${item.condicao || 'Condição não informada'} - ${BRL.format(item.preco)}`);
-  const total = cart.reduce((s,item)=>s+item.preco,0);
+function clearCart() {
+  cart = [];
+  saveCart();
+  render();
+}
+
+function cartMessage() {
+  const lines = cart.map((item, idx) =>
+    `${idx + 1}. ${item.nome} #${item.numero}${item.set ? ` (${item.set})` : ''} - ${item.idioma || 'Idioma não informado'} - ${item.condicao || 'Condição não informada'} - ${BRL.format(item.preco)}`
+  );
+
+  const total = cart.reduce((s, item) => s + item.preco, 0);
+
   return `Olá! Tenho interesse nas seguintes cartas Pokémon TCG:\n\n${lines.join('\n')}\n\nValor total: ${BRL.format(total)}\n\nPode confirmar disponibilidade e forma de pagamento?`;
 }
 
-function renderCart(){
+function renderCart() {
   const count = cart.length;
   const total = cart.reduce((s, item) => s + item.preco, 0);
 
-  $('cartCount').textContent = `${count} carta${count === 1 ? '' : 's'}`;
-  $('cartTotal').textContent = BRL.format(total);
+  if ($('cartCount')) {
+    $('cartCount').textContent = `${count} carta${count === 1 ? '' : 's'}`;
+  }
 
-  $('cartItems').innerHTML = count
-    ? cart.map(item => {
-        const imageUrl = item.imagem || 'assets/card-placeholder.svg';
+  if ($('cartTotal')) {
+    $('cartTotal').textContent = BRL.format(total);
+  }
 
-        return `
-          <div class="cartItem">
-            ${imageUrl}
+  if ($('cartItems')) {
+    $('cartItems').innerHTML = count
+      ? cart.map(item => {
+          const imageUrl = item.imagem || 'assets/card-placeholder.svg';
 
-            <div>
-              <strong>${item.nome} #${item.numero}</strong>
-              <span>
-                ${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}
-              </span>
+          return `
+            <div class="cartItem">
+              ${imageUrl}
+
+              <div>
+                <strong>${item.nome} #${item.numero}</strong>
+                <span>
+                  ${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}
+                </span>
+              </div>
+
+              <button onclick="removeFromCart('${escapeAttr(item.key)}')">
+                ×
+              </button>
             </div>
-
-            <button onclick="removeFromCart('${escapeAttr(item.key)}')">
-              ×
-            </button>
-          </div>
-        `;
-      }).join('')
-    : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
+          `;
+        }).join('')
+      : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
+  }
 
   const link = $('cartWhatsapp');
-  link.href = waLink(cartMessage());
-  link.classList.toggle('disabled', count === 0);
-}
-function populateFilters(){
-  const fill = (id, values)=>{
-    const el=$(id);
-    const current=el.value;
-    const opts=['Todos',...Array.from(new Set(values.filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pt-BR'))];
-    el.innerHTML=opts.map(v=>`<option value="${v}">${v}</option>`).join('');
-    if(opts.includes(current)) el.value=current;
-  };
-  fill('languageFilter', rows.map(r=>clean(r.Idioma)));
-  fill('conditionFilter', rows.map(r=>clean(r.Condicao || r['Condição'])));
+
+  if (link) {
+    link.href = waLink(cartMessage());
+    link.classList.toggle('disabled', count === 0);
+  }
 }
 
-['search','statusFilter','languageFilter','conditionFilter','sortBy'].forEach(id=>$(id)?.addEventListener('input',()=>render()));
-document.getElementById('printBtn')?.addEventListener('click',()=>window.print());
-document.getElementById('cartToggle')?.addEventListener('click',()=>document.getElementById('cart')?.classList.toggle('collapsed'));
-document.getElementById('clearCart')?.addEventListener('click',clearCart);
+function populateFilters() {
+  const fill = (id, values) => {
+    const el = $(id);
+
+    if (!el) {
+      return;
+    }
+
+    const current = el.value;
+
+    const opts = [
+      'Todos',
+      ...Array.from(new Set(values.filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    ];
+
+    el.innerHTML = opts
+      .map(v => `<option value="${v}">${v}</option>`)
+      .join('');
+
+    if (opts.includes(current)) {
+      el.value = current;
+    }
+  };
+
+  fill('languageFilter', rows.map(r => clean(r.Idioma)));
+  fill('conditionFilter', rows.map(r => clean(r.Condicao || r['Condição'])));
+}
+
+['search', 'statusFilter', 'languageFilter', 'conditionFilter', 'sortBy']
+  .forEach(id => {
+    const el = $(id);
+
+    if (el) {
+      el.addEventListener('input', () => render());
+    }
+  });
+
+document.getElementById('printBtn')?.addEventListener('click', () => window.print());
+
+document.getElementById('cartToggle')?.addEventListener('click', () => {
+  document.getElementById('cart')?.classList.toggle('collapsed');
+});
+
+document.getElementById('clearCart')?.addEventListener('click', clearCart);
 
 loadCart();
 loadRows();
