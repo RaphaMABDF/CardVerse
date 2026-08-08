@@ -85,40 +85,103 @@ function renderSummary(data,warn=''){
 }
 
 function renderCards(data){
-  const cartKeys = new Set(cart.map(item=>item.key));
-  $('catalog').innerHTML = data.map(r=>{
+
+  const cartKeys = new Set(
+    cart.map(item => item.key)
+  );
+
+  $('catalog').innerHTML = data.map(r => {
+
     const cond = clean(r.Condicao || r['Condição']);
     const status = clean(r.Status) || 'Disponível';
     const available = isAvailable(r);
-    const reserve = status==='Reservado';
+    const reserve = status === 'Reservado';
+
     const key = keyOf(r);
-    const selected = cartKeys.has(key);
-    const msg = `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
-    return `<article class="card ${selected?'selectedForCart':''}">
-      <span class="ribbon ${available?'':reserve?'reserved':'sold'}">${status}</span>
-      <div class="imageWrap">
-  'assets/card-placeholder.svg'}"
-      alt="${clean(r.Nome)}">
-</div>
-      <div class="cardBody">
-        <h2>${clean(r.Nome)}</h2>
-        <p class="meta">Nº ${clean(r.Numero)||'-'} • ${clean(r.Set)||'Coleção não informada'}</p>
-        <div class="price">${BRL.format(priceNumber(r.Preco))}</div>
-        <div class="tags">
-          <span class="tag">${clean(r.Idioma)||'Idioma não informado'}</span>
-          <span class="tag tag--green">${cond||'Condição não informada'}</span>
-          ${clean(r.Variante)?`<span class="tag">${clean(r.Variante)}</span>`:''}
-          ${clean(r.Observacoes)?`<span class="tag tag--red">${clean(r.Observacoes)}</span>`:''}
+
+    const selected =
+      cartKeys.has(key);
+
+    const msg =
+      `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
+
+    return `
+      <article class="card ${selected?'selectedForCart':''}">
+
+        <span class="ribbon ${available?'':reserve?'reserved':'sold'}">
+          ${status}
+        </span>
+
+        <div class="imageWrap">
+
+          'assets/card-placeholder.svg'}"
+            alt="${clean(r.Nome)}">
+
         </div>
-        ${available?`
-          <button class="selectBtn ${selected?'selected':''}" onclick="toggleCart('${escapeAttr(key)}')">${selected?'Remover do carrinho':'Adicionar ao carrinho'}</button>
-          ">
-   Comprar somente esta carta
-</a>)}
-        `:''}
-      </div>
-    </article>`;
+
+        <div class="cardBody">
+
+          <h2>${clean(r.Nome)}</h2>
+
+          <p class="meta">
+            Nº ${clean(r.Numero)||'-'}
+            •
+            ${clean(r.Set)||'Coleção não informada'}
+          </p>
+
+          <div class="price">
+            ${BRL.format(priceNumber(r.Preco))}
+          </div>
+
+          <div class="tags">
+
+            <span class="tag">
+              ${clean(r.Idioma)||'Idioma não informado'}
+            </span>
+
+            <span class="tag tag--green">
+              ${cond || 'Condição não informada'}
+            </span>
+
+            ${clean(r.Variante)
+              ? `<span class="tag">${clean(r.Variante)}</span>`
+              : ''
+            }
+
+            ${clean(r.Observacoes)
+              ? `<span class="tag tag--red">${clean(r.Observacoes)}</span>`
+              : ''
+            }
+
+          </div>
+
+          ${available ? `
+
+            <button
+              class="selectBtn ${selected?'selected':''}"
+              onclick="toggleCart('${escapeAttr(key)}')">
+
+              ${selected
+                ? 'Remover do carrinho'
+                : 'Adicionar ao carrinho'}
+
+            </button>
+
+            ">
+
+              Comprar somente esta carta
+
+            </a>
+
+          ` : ''}
+
+        </div>
+
+      </article>
+    `;
+
   }).join('');
+
   renderCart();
 }
 
