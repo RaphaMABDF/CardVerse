@@ -94,7 +94,27 @@ function renderCards(data){
     const key = keyOf(r);
     const selected = cartKeys.has(key);
     const msg = `Olá! Tenho interesse na carta ${clean(r.Nome)} #${clean(r.Numero)} (${clean(r.Set)}), ${clean(r.Idioma)}, condição ${cond}, preço ${BRL.format(priceNumber(r.Preco))}.`;
-    return `<article class="card ${selected?'selectedForCart':''}"><span class="ribbon ${available?'':reserve?'reserved':'sold'}">${status}</span><div class="imageWrap">${imgOf(r)||'assets/card-placeholder.svg'}</div><div class="cardBody"><h2>${clean(r.Nome)}</h2><p class="meta">Nº ${clean(r.Numero)||'-'} • ${clean(r.Set)||'Coleção não informada'}</p><div class="price">${BRL.format(priceNumber(r.Preco))}</div><div class="tags"><span class="tag">${clean(r.Idioma)||'Idioma não informado'}</span><span class="tag tag--green">${cond||'Condição não informada'}</span>${clean(r.Variante)?`<span class="tag">${clean(r.Variante)}</span>`:''}${clean(r.Observacoes)?`<span class="tag tag--red">${clean(r.Observacoes)}</span>`:''}</div>${available?`<button class="selectBtn ${selected?'selected':''}" onclick="toggleCart('${escapeAttr(key)}')">${selected?'Remover do carrinho':'Adicionar ao carrinho'}</button>${waLink(msg)}`:''}</div></article>`;
+    return `<article class="card ${selected?'selectedForCart':''}">
+      <span class="ribbon ${available?'':reserve?'reserved':'sold'}">${status}</span>
+      <div class="imageWrap">
+        <img loading="lazy" src="${imgOflder.svg'}
+      </div>
+      <div class="cardBody">
+        <h2>${clean(r.Nome)}</h2>
+        <p class="meta">Nº ${clean(r.Numero)||'-'} • ${clean(r.Set)||'Coleção não informada'}</p>
+        <div class="price">${BRL.format(priceNumber(r.Preco))}</div>
+        <div class="tags">
+          <span class="tag">${clean(r.Idioma)||'Idioma não informado'}</span>
+          <span class="tag tag--green">${cond||'Condição não informada'}</span>
+          ${clean(r.Variante)?`<span class="tag">${clean(r.Variante)}</span>`:''}
+          ${clean(r.Observacoes)?`<span class="tag tag--red">${clean(r.Observacoes)}</span>`:''}
+        </div>
+        ${available?`
+          <button class="selectBtn ${selected?'selected':''}" onclick="toggleCart('${escapeAttr(key)}')">${selected?'Remover do carrinho':'Adicionar ao carrinho'}</button>
+          <a class="wh)}
+        `:''}
+      </div>
+    </article>`;
   }).join('');
   renderCart();
 }
@@ -127,7 +147,11 @@ function renderCart(){
   const total = cart.reduce((s,item)=>s+item.preco,0);
   $('cartCount').textContent = `${count} carta${count===1?'':'s'}`;
   $('cartTotal').textContent = BRL.format(total);
-  $('cartItems').innerHTML = count ? cart.map(item=>`<div class="cartItem">${item.imagem || 'assets/card-placeholder.svg'}<div><strong>${item.nome} #${item.numero}</strong><span>${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}</span></div><button onclick="removeFromCart('${escapeAttr(item.key)}')">×</button></div>`).join('') : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
+  $('cartItems').innerHTML = count ? cart.map(item=>`<div class="cartItem">
+      ${item.imagem || 'assets/card-placeholder.svg'}="${item.nome}">
+      <div><strong>${item.nome} #${item.numero}</strong><span>${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}</span></div>
+      <button onclick="removeFromCart('${escapeAttr(item.key)}')">×</button>
+    </div>`).join('') : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
   const link = $('cartWhatsapp');
   link.href = waLink(cartMessage());
   link.classList.toggle('disabled', count===0);
