@@ -97,8 +97,9 @@ function renderCards(data){
     return `<article class="card ${selected?'selectedForCart':''}">
       <span class="ribbon ${available?'':reserve?'reserved':'sold'}">${status}</span>
       <div class="imageWrap">
-        <img loading="lazy" src="${imgOflder.svg'}
-      </div>
+  'assets/card-placeholder.svg'}"
+      alt="${clean(r.Nome)}">
+</div>
       <div class="cardBody">
         <h2>${clean(r.Nome)}</h2>
         <p class="meta">Nº ${clean(r.Numero)||'-'} • ${clean(r.Set)||'Coleção não informada'}</p>
@@ -111,7 +112,9 @@ function renderCards(data){
         </div>
         ${available?`
           <button class="selectBtn ${selected?'selected':''}" onclick="toggleCart('${escapeAttr(key)}')">${selected?'Remover do carrinho':'Adicionar ao carrinho'}</button>
-          <a class="wh)}
+          ">
+   Comprar somente esta carta
+</a>)}
         `:''}
       </div>
     </article>`;
