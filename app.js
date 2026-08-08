@@ -194,29 +194,32 @@ function renderCart(){
   $('cartTotal').textContent = BRL.format(total);
 
   $('cartItems').innerHTML = count
-    ? cart.map(item => `
-        <div class="cartItem">
-          ${item.imagem || 'assets/card-placeholder.svg'}
+    ? cart.map(item => {
+        const imageUrl = item.imagem || 'assets/card-placeholder.svg';
 
-          <div>
-            <strong>${item.nome} #${item.numero}</strong>
-            <span>
-              ${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}
-            </span>
+        return `
+          <div class="cartItem">
+            ${imageUrl}
+
+            <div>
+              <strong>${item.nome} #${item.numero}</strong>
+              <span>
+                ${item.set || 'Coleção não informada'} • ${BRL.format(item.preco)}
+              </span>
+            </div>
+
+            <button onclick="removeFromCart('${escapeAttr(item.key)}')">
+              ×
+            </button>
           </div>
-
-          <button onclick="removeFromCart('${escapeAttr(item.key)}')">
-            ×
-          </button>
-        </div>
-      `).join('')
+        `;
+      }).join('')
     : '<p style="margin:4px 0;color:#64748b">Selecione uma ou mais cartas disponíveis.</p>';
 
   const link = $('cartWhatsapp');
   link.href = waLink(cartMessage());
   link.classList.toggle('disabled', count === 0);
 }
-
 function populateFilters(){
   const fill = (id, values)=>{
     const el=$(id);
